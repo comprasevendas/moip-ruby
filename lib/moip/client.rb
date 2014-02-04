@@ -29,11 +29,13 @@ module MoIP
       # Inexistente " Login inexistente no sistema MoIP "
       # Criado  " Login criado, porem não verificado "
       # Verificado  " Login verificado "
-# MoIP::Client.verify 'aaa'
+      # MoIP::Client.verify 'aaa'
 
       def verify account
         full_data = peform_action!(:get, "VerificarConta/#{account}")
-        return full_data["ns1:verificarContaResponse"]["RespostaVerificarConta"]["Status"] == "Verificado"
+        puts full_data.inspect
+        Rails.logger.info full_data.inspect
+        return full_data.parsed_response["verificarContaResponse"]["RespostaVerificarConta"]["Status"] == "Verificado"
       end
 
       # Envia uma instrução para pagamento único
@@ -42,15 +44,15 @@ module MoIP
         puts "************ XML ************"
         puts body
         full_data = peform_action!(:post, 'EnviarInstrucao/Unica', :body => body)
-       # raise full_data.inspect
-        get_response!(full_data["ns1:EnviarInstrucaoUnicaResponse"]["Resposta"])
+        puts full_data.inspect
+        get_response!(full_data.parsed_response["EnviarInstrucaoUnicaResponse"]["Resposta"])
       end
 
       # Consulta dos dados das autorizações e pagamentos associados à Instrução
       def query(token)
         full_data = peform_action!(:get, "ConsultarInstrucao/#{token}")
 
-        get_response!(full_data["ns1:ConsultarTokenResponse"]["RespostaConsultar"])
+        get_response!(parsed_response.full_data["ConsultarTokenResponse"]["RespostaConsultar"])
       end
 
       # Retorna a URL de acesso ao MoIP

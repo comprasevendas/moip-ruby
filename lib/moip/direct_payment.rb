@@ -8,6 +8,7 @@ module MoIP
   CodigoEstado = %w{AC AL AM AP BA CE DF ES GO MA MG MS MT PA PB PE PI PR RJ RN RO RR RS SC SE SP TO}
   CodigoMoeda = "BRL"
   CodigoPais = "BRA"
+  TipoValidacao = %w{Transparente}
   Destino = %w{Nenhum MesmoCobranca AInformar PreEstabelecido}
   InstituicaoPagamento = %w{MoIP Visa AmericanExpress Mastercard Diners BancoDoBrasil Bradesco Itau BancoReal Unibanco Aura Hipercard Paggo Banrisul}
   FormaPagamento = %w{CarteiraMoIP CartaoCredito CartaoDebito DebitoBancario FinanciamentoBancario BoletoBancario}
@@ -46,14 +47,14 @@ module MoIP
         raise(InvalidPhone, "Telefone deve ter o formato (99)9999-9999.") if attributes[:pagador][:tel_fixo] !~ /\(\d{2}\)?\d{4}-\d{4}/
         raise(InvalidCellphone, "Telefone celular deve ter o formato (99)9999-9999.") if attributes[:pagador][:tel_cel] !~ /\(\d{2}\)?\d{4}-\d{4}/
 
-        raise(MissingBirthdate, "É obrigatório passar as informarções do pagador") if TiposComInstituicao.include?(attributes[:forma]) && attributes[:data_nascimento].nil?
+        #raise(MissingBirthdate, "É obrigatório passar as informarções do pagador") if TiposComInstituicao.include?(attributes[:forma]) && attributes[:data_nascimento].nil?
 
-        raise(InvalidExpiry, "Data de expiração deve ter o formato 01-00 até 12-99.") if TiposComInstituicao.include?(attributes[:forma]) && attributes[:expiracao] !~ /(1[0-2]|0\d)\/\d{2}/
+        #raise(InvalidExpiry, "Data de expiração deve ter o formato 01/00 até 12/99.") if TiposComInstituicao.include?(attributes[:forma]) && attributes[:expiracao] !~ /(1[0-2]|0\d)\/\d{2}/
 
 
-        raise(InvalidReceiving, "Recebimento é inválido. Escolha um destes: #{TipoRecebimento.join(', ')}") if !TipoRecebimento.include?(attributes[:recebimento]) && TiposComInstituicao.include?(attributes[:forma])
+        #raise(InvalidReceiving, "Recebimento é inválido. Escolha um destes: #{TipoRecebimento.join(', ')}") if !TipoRecebimento.include?(attributes[:recebimento]) && TiposComInstituicao.include?(attributes[:forma])
 
-        raise(InvalidInstitution, "A instituição #{attributes[:instituicao]} é inválida. Escolha uma destas: #{InstituicaoPagamento.join(', ')}") if  TiposComInstituicao.include?(attributes[:forma]) && !InstituicaoPagamento.include?(attributes[:instituicao])
+        #raise(InvalidInstitution, "A instituição #{attributes[:instituicao]} é inválida. Escolha uma destas: #{InstituicaoPagamento.join(', ')}") if  TiposComInstituicao.include?(attributes[:forma]) && !InstituicaoPagamento.include?(attributes[:instituicao])
 
         builder = Nokogiri::XML::Builder.new(:encoding => "UTF-8") do |xml|
 
@@ -74,64 +75,10 @@ module MoIP
                 xml.text attributes[:id_proprio]
               }
 
-              # Definindo o pagamento direto
-              xml.PagamentoDireto {
-                xml.Forma {
-                  xml.text attributes[:forma]
-                }
-
-                # Débito Bancário
-                if ["DebitoBancario"].include?(attributes[:forma])
-                  xml.Instituicao {
-                    xml.text attributes[:instituicao]
-                  }
-                end
-
-                # Cartão de Crédito
-                if attributes[:forma] == "CartaoCredito"
-                  xml.Instituicao {
-                    xml.text attributes[:instituicao]
-                  }
-                  xml.CartaoCredito {
-                    xml.Numero {
-                      xml.text attributes[:numero]
-                    }
-                    xml.Expiracao {
-                      xml.text attributes[:expiracao]
-                    }
-                    xml.CodigoSeguranca {
-                      xml.text attributes[:codigo_seguranca]
-                    }
-                    xml.Portador {
-                      xml.Nome {
-                        xml.text attributes[:nome]
-                      }
-                      xml.Identidade(:Tipo => "CPF") {
-                        xml.text attributes[:identidade]
-                      }
-                      xml.Telefone {
-                        xml.text attributes[:telefone]
-                      }
-                      xml.DataNascimento {
-                        xml.text attributes[:data_nascimento]
-                      }
-                    }
-                  }
-                  xml.Parcelamento {
-                    xml.Parcelas {
-                      xml.text attributes[:parcelas]
-                    }
-                    xml.Recebimento {
-                      xml.text attributes[:recebimento]
-                    }
-                  }
-                end
-              }
-
-              # Dados do pagador
               xml.Pagador {
                 xml.Nome { xml.text attributes[:pagador][:nome] }
-                xml.LoginMoIP { xml.text attributes[:pagador][:login_moip] }
+                xml.LoginMoIP { xml.text attributes[:pagador][:login_moip] } if !attributes[:pagador][:login_moip].blank?
+                xml.IdPagador { xml.text attributes[:pagador][:id_pagador] } if !attributes[:pagador][:id_pagador].blank?
                 xml.Email { xml.text attributes[:pagador][:email] }
                 xml.TelefoneCelular { xml.text attributes[:pagador][:tel_cel] }
                 xml.Apelido { xml.text attributes[:pagador][:apelido] }
@@ -148,6 +95,63 @@ module MoIP
                   xml.TelefoneFixo { xml.text attributes[:pagador][:tel_fixo] }
                 }
               }
+
+
+              # # Definindo o pagamento direto
+              # xml.PagamentoDireto {
+              #   xml.Forma {
+              #     xml.text attributes[:forma]
+              #   }
+
+              #   # Débito Bancário
+              #   if ["DebitoBancario"].include?(attributes[:forma])
+              #     xml.Instituicao {
+              #       xml.text attributes[:instituicao]
+              #     }
+              #   end
+
+              #   # Cartão de Crédito
+              #   if attributes[:forma] == "CartaoCredito"
+              #     xml.Instituicao {
+              #       xml.text attributes[:instituicao]
+              #     }
+              #     xml.CartaoCredito {
+              #       xml.Numero {
+              #         xml.text attributes[:numero]
+              #       }
+              #       xml.Expiracao {
+              #         xml.text attributes[:expiracao]
+              #       }
+              #       xml.CodigoSeguranca {
+              #         xml.text attributes[:codigo_seguranca]
+              #       }
+              #       xml.Portador {
+              #         xml.Nome {
+              #           xml.text attributes[:nome]
+              #         }
+              #         xml.Identidade(:Tipo => "CPF") {
+              #           xml.text attributes[:identidade]
+              #         }
+              #         xml.Telefone {
+              #           xml.text attributes[:telefone]
+              #         }
+              #         xml.DataNascimento {
+              #           xml.text attributes[:data_nascimento]
+              #         }
+              #       }
+              #     }
+              #     xml.Parcelamento {
+              #       xml.Parcelas {
+              #         xml.text attributes[:parcelas]
+              #       }
+              #       xml.Recebimento {
+              #         xml.text attributes[:recebimento]
+              #       }
+              #     }
+              #   end
+              # }
+
+              # Dados do pagador
 
               # Boleto Bancario
               if attributes[:forma] == "BoletoBancario"
@@ -171,7 +175,33 @@ module MoIP
                   xml.text attributes[:url_retorno]
                 }
               end
-                
+
+              # if !attributes[:recebedor].blank?
+              #   xml.Recebedor {
+              #     xml.LoginMoIP {xml.text attributes[:recebedor][:login_moip]} if !attributes[:recebedor][:login_moip].blank?
+              #     xml.Apelido {xml.text attributes[:recebedor][:apelido]} if !attributes[:recebedor][:apelido].blank?
+              #   }
+              # end
+              
+              if !attributes[:comissoes].blank?
+                xml.Comissoes {
+                  attributes[:comissoes][:comissionamentos].each do |comissionamento|
+                    xml.Comissionamento {
+                      xml.Razao {xml.text comissionamento[:razao]}
+                      xml.Comissionado {
+                        xml.LoginMoIP {xml.text comissionamento[:user_moip]}
+                      }
+                      xml.ValorFixo {xml.text comissionamento[:valor_fixo].to_f} if !comissionamento[:valor_fixo].blank?
+                      xml.ValorPercentual {xml.text comissionamento[:valor_percentual].to_f} if !comissionamento[:valor_percentual].blank?
+                    }
+                  end
+                  if !attributes[:comissoes][:pagador_taxa].blank?
+                    xml.PagadorTaxa {
+                      xml.LoginMoIP {xml.text attributes[:comissoes][:pagador_taxa]}
+                    }
+                  end
+                }
+              end
             }
           }
         end

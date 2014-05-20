@@ -38,13 +38,13 @@ module MoIP
 
       # Cria uma instrução de pagamento direto
       def body(attributes = {})
+        Rails.logger.info attributes.inspect          
+        #raise "#{attributes[:valor]}--#{attributes[:valor].to_f}"
 
-#raise "#{attributes[:valor]}--#{attributes[:valor].to_f}"
         raise(MissingPaymentTypeError, "É necessário informar a razão do pagamento") if attributes[:razao].nil?
         raise(MissingPayerError, "É obrigatório passar as informarções do pagador") if attributes[:pagador].nil?
-
         raise(InvalidValue, "Valor deve ser maior que zero.") if attributes[:valor].to_f <= 0.0
-        raise(InvalidPhone, "Telefone deve ter o formato (99)9999-9999.") if attributes[:pagador][:tel_fixo] !~ /\(\d{2}\)?\d{4,5}-\d{4}/
+        raise(InvalidPhone, "Telefone deve ter o formato (99)9999-9999.") if !attributes[:pagador][:tel_fixo].blank? && attributes[:pagador][:tel_fixo] !~ /\(\d{2}\)?\d{4,5}-\d{4}/
         raise(InvalidCellphone, "Telefone celular deve ter o formato (99)9999-9999.") if attributes[:pagador][:tel_cel] !~ /\(\d{2}\)?\d{4,5}-\d{4}/
 
         #raise(MissingBirthdate, "É obrigatório passar as informarções do pagador") if TiposComInstituicao.include?(attributes[:forma]) && attributes[:data_nascimento].nil?
@@ -60,7 +60,7 @@ module MoIP
 
           # Identificador do tipo de instrução
           xml.EnviarInstrucao {
-            xml.InstrucaoUnica {
+            xml.InstrucaoUnica('TipoValidacao' => 'Transparente') {
 
               # Dados da transação
               xml.Razao {
